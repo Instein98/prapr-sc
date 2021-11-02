@@ -24,20 +24,25 @@ import static org.mudebug.prapr.entry.report.compressedxml.Tag.block;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.description;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.index;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.killingTests;
-import static org.mudebug.prapr.entry.report.compressedxml.Tag.coveringTests;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.lineNumber;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.methodDescription;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.mutatedClass;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.mutatedMethod;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.mutation;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.mutator;
-import static org.mudebug.prapr.entry.report.compressedxml.Tag.suspValue;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.name;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.patchExecutionTime;
 import static org.mudebug.prapr.entry.report.compressedxml.Tag.sourceFile;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.suspValue;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.test;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.testsExecutionTime;
+import static org.mudebug.prapr.entry.report.compressedxml.Tag.time;
 
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.mudebug.prapr.core.SuspStrategy;
 import org.mudebug.prapr.entry.report.Commons;
@@ -46,7 +51,9 @@ import org.pitest.functional.Option;
 import org.pitest.mutationtest.ClassMutationResults;
 import org.pitest.mutationtest.MutationResult;
 import org.pitest.mutationtest.MutationResultListener;
+import org.pitest.mutationtest.MutationStatusTestPair;
 import org.pitest.mutationtest.engine.MutationDetails;
+import org.pitest.testapi.Description;
 import org.pitest.util.StringUtil;
 import org.pitest.util.Unchecked;
 
@@ -63,7 +70,12 @@ enum Tag {
     killingTests,
     description,
     suspValue,
-    block;
+    block,
+    patchExecutionTime,
+    test,
+    time,
+    name,
+    testsExecutionTime;
 }
 
 /**
@@ -112,6 +124,12 @@ public class CompressedXMLReportListener implements MutationResultListener {
 
     private String makeMutationNode(final MutationResult mutation) {
         final MutationDetails details = mutation.getDetails();
+        //set execution time
+        // details.setPatchExecutionTime(Long.parseLong(getTimeOfExecutions(details)));
+        // String tests = createCoveringTestsDesc(details.getTestsInOrder());
+        MutationStatusTestPair mstp = mutation.getStatusTestPair();
+        // System.out.println("mutation execution time: " + mstp.getMutationExecutionTime());
+        // System.out.println("tests execution time: " + mstp.getTestsExecutionTime());
         return makeNode(clean(details.getFilename()), sourceFile)
                 + makeNode(clean(details.getClassName().asJavaName()), mutatedClass)
                 + makeNode(clean(details.getMethod().name()), mutatedMethod)
@@ -120,10 +138,13 @@ public class CompressedXMLReportListener implements MutationResultListener {
                 + makeNode(clean(details.getMutator()), mutator)
                 + makeNode("" + details.getFirstIndex(), index)
                 + makeNode("" + details.getBlock(), block)
-                + makeNode(createCoveringTestsDesc(details.getTestsInOrder()), coveringTests)
+                // + makeNode(createCoveringTestsDesc(details.getTestsInOrder()), coveringTests)
                 + makeNode(createAllKillingTestDesc(mutation.getStatusTestPair().getKillingTest()), killingTests)
                 + makeNode(Double.toString(getSusp(details)), suspValue)
-                + makeNode(clean(details.getDescription()), description);
+                + makeNode(clean(details.getDescription()), description)
+                + makeNode(getRunTestNodes(mstp.getTestsExecutionTime()), testsExecutionTime)
+                + makeNode(String.valueOf(mstp.getMutationExecutionTime()) + "ms", patchExecutionTime);
+                // + makeNode(getTimeOfTests(details), testsExecutionTime);
     }
 
     private double getSusp(final MutationDetails details) {
@@ -177,6 +198,25 @@ public class CompressedXMLReportListener implements MutationResultListener {
         } catch (final IOException e) {
             throw Unchecked.translateCheckedException(e);
         }
+    }
+
+    /**
+     * Prepare to make test time nodes
+     * @author: Jun Yang
+     */
+    private String getRunTestNodes(Map<Description, Long> testTimeMap)
+    {
+        String testNodes = "";
+        long t0 = System.currentTimeMillis();
+
+        for (Map.Entry<Description, Long>entry : testTimeMap.entrySet())
+        {
+            String nameNode = makeNode(entry.getKey().getQualifiedName(), name);
+            String timeNode = makeNode(entry.getValue().toString() + "ms", time);
+            String testNode = makeNode(nameNode + timeNode, test);
+            testNodes += testNode;
+        }
+        return testNodes;
     }
 
     @Override
