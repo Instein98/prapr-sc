@@ -28,12 +28,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -48,6 +43,7 @@ import org.pitest.mutationtest.engine.MutationDetails;
 import org.pitest.mutationtest.engine.MutationIdentifier;
 import org.pitest.mutationtest.engine.SimplifiedMutationDetails;
 import org.pitest.mutationtest.mocksupport.JavassistInterceptor;
+import org.pitest.testapi.Description;
 import org.pitest.testapi.TestResult;
 import org.pitest.testapi.TestUnit;
 import org.pitest.testapi.execute.Container;
@@ -89,10 +85,8 @@ public class MutationTestWorker {
       final long t0 = System.currentTimeMillis();
       processMutation(r, testSource, mutation);
       long executionTime = System.currentTimeMillis() - t0;
-      if (DEBUG) {
-        LOG.fine("processed mutation in " + executionTime
+        LOG.info("processed mutation in " + executionTime
             + " ms.");
-      }
     }
   }
 
@@ -143,6 +137,24 @@ public class MutationTestWorker {
     final List<TestUnit> relevantTests = testSource
         .translateTests(mutationDetails.getTestsInOrder());
 
+    LOG.info("timeoutTestsDescriptions:\n" + Arrays.toString(MutationTestMinion.timeoutTestsDescriptions.toArray()));
+    // reorder tests
+    for (Description description: MutationTestMinion.timeoutTestsDescriptions){
+      int idx = -1;
+      for (int i = 0; i < relevantTests.size(); i++){
+        if (relevantTests.get(i).getDescription().equals(description)){
+          idx = i;
+          break;
+        }
+      }
+//      int idx = relevantTests.stream().map(TestUnit::getDescription).collect(Collectors.toList()).indexOf(description);
+      if (idx != -1){
+        LOG.info("Reordering the timeout test to the end: " + description.getQualifiedName());
+        TestUnit unit = relevantTests.remove(idx);
+        relevantTests.add(unit);
+      }
+    }
+
     r.describe(mutationId);
 
     final MutationStatusTestPair mutationDetected = handleMutation(
@@ -153,9 +165,7 @@ public class MutationTestWorker {
     long patchExecutionTime = System.currentTimeMillis() - t0;
     mutationDetected.setMutationExecutionTime(patchExecutionTime);
     r.report(mutationId, mutationDetected);
-    if (DEBUG) {
-      LOG.fine("Mutation " + mutationId + " detected = " + mutationDetected);
-    }
+    LOG.info("Mutation " + mutationId + " detected = " + mutationDetected);
   }
 
   private MutationStatusTestPair handleMutation(

@@ -35,8 +35,10 @@ import org.pitest.testapi.Description;
 import org.pitest.testapi.ResultCollector;
 import org.pitest.testapi.TestResult;
 import org.pitest.testapi.TestUnit;
+import org.pitest.testapi.execute.CurrentTestResultCollector;
 import org.pitest.testapi.execute.ExitingResultCollector;
 import org.pitest.testapi.execute.containers.ConcreteResultCollector;
+import org.pitest.util.ExitCode;
 import org.pitest.util.Unchecked;
 import org.pitest.util.Log;
 
@@ -85,7 +87,18 @@ public final class MutationTimeoutDecorator extends TestUnitDecorator {
         }
     }
     if (!future.isDone()) {
-      this.timeOutSideEffect.apply();
+      if (timeOutSideEffect instanceof TimeOutSystemExitSideEffect){
+        Reporter r = ((TimeOutSystemExitSideEffect) timeOutSideEffect).getR();
+        if (r instanceof CurrentTestReporter){
+          Description timeoutDescription = ((ExitingResultCollector)rc).getCurDescription();
+          Log.getLogger().info("TIMEOUT when running test: " + timeoutDescription.getQualifiedName());
+          ((CurrentTestReporter) r).done(ExitCode.TIMEOUT, timeoutDescription);
+        } else {
+          r.done(ExitCode.TIMEOUT);
+        }
+      } else {
+        this.timeOutSideEffect.apply();
+      }
     }
 
   }

@@ -27,6 +27,11 @@ public class ExitingResultCollector implements ResultCollector {
 
   private final ResultCollector child;
   private boolean               hadFailure = false;
+  private Description curDescription;
+
+  public Description getCurDescription() {
+    return curDescription;
+  }
 
   public ExitingResultCollector(final ResultCollector child) {
     this.child = child;
@@ -40,6 +45,7 @@ public class ExitingResultCollector implements ResultCollector {
   @Override
   public void notifyStart(final Description description) {
     this.child.notifyStart(description);
+    curDescription = description;
   }
 
   @Override
