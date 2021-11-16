@@ -26,6 +26,7 @@ import org.mudebug.prapr.core.mutationtest.AugmentedEngineArguments;
 import org.mudebug.prapr.entry.coverage.execute.PraPRCoverageGenerator;
 import org.mudebug.prapr.entry.mutationtest.AugmentedListenerArguments;
 import org.mudebug.prapr.entry.mutationtest.build.PraPRTestPrioritizer;
+import org.mudebug.prapr.entry.report.log.LOGReportFactory;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassInfo;
 import org.pitest.classinfo.ClassName;
@@ -257,6 +258,8 @@ public class MutationCoverage {
         final MutationResultListener mutationReportListener = this.strategies.listenerFactory()
                 .getListener(this.data.getFreeFormProperties(), args);
 
+
+        ls.add(new LOGReportFactory().getListener(this.data.getFreeFormProperties(), args));
         ls.add(mutationReportListener);
         ls.add(new HistoryListener(history()));
 

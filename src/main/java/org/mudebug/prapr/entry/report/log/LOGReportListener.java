@@ -241,7 +241,28 @@ public class LOGReportListener implements MutationResultListener {
             this.allMutations.add(MutationResultWrapper.wrap(mr));
         }
     }
-    
+
+    private void printTimeoutMutation() {
+        for (MutationResult result: this.killedMutations){
+            if (result.getStatus() == DetectionStatus.TIMED_OUT){
+                MutationDetails md = result.getDetails();
+                final String mutatedClass = md.getClassName().asInternalName();
+                final int lastSlash = mutatedClass.lastIndexOf('/');
+                final File dumpFile = this.dumpFiles.get(md);
+                if (dumpFile != null) {
+                    if (this.shouldDumpMutations) {
+                        try (final FileOutputStream fos = new FileOutputStream(dumpFile)) {
+                            final byte[] bytes = this.mutater.getMutation(md.getId()).getBytes();
+                            fos.write(bytes);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private void printRankedList() {
         final int plausiblesSize = this.survivedMutations.size();
         final int totalSize = this.killedMutations.size() + plausiblesSize;
