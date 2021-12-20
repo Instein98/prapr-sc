@@ -55,7 +55,7 @@ public class AugmentedListenerArguments extends ListenerArguments {
                                       final Collection<String> failingTests,
                                       final int allTestsCount,
                                       final boolean dumpMutations) {
-        super(outputStrategy, coverage, locator, engine, startTime);
+        super(outputStrategy, coverage, locator, engine, startTime, true);
         this.failingTests = failingTests;
         this.allTestsCount = allTestsCount;
         this.suspStrategy = suspStrategy;

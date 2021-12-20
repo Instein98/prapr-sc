@@ -331,7 +331,7 @@ public class MutationCoverage {
 
         final WorkerFactory wf = new WorkerFactory(this.baseDir, coverage().getConfiguration(), mutationConfig, args,
                 new PercentAndConstantTimeoutStrategy(this.data.getTimeoutFactor(), this.data.getTimeoutConstant()),
-                this.data.isVerbose(), this.data.getClassPath().getLocalClassPath());
+                this.data.isVerbose(), true, this.data.getClassPath().getLocalClassPath());
 
         MutationGrouper grouper = this.settings.getMutationGrouper().makeFactory(this.data.getFreeFormProperties(),
                 this.code, this.data.getNumberOfThreads(), this.data.getMutationUnitSize());

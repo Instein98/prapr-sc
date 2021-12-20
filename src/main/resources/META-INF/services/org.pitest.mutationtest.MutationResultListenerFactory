@@ -1,2 +1,2 @@
 org.mudebug.prapr.entry.report.log.LOGReportFactory
-org.mudebug.prapr.entry.report.compressedxml.CompressedXMLFactory
+org.mudebug.prapr.entry.report.compressedxml.PraprXMLReportFactory

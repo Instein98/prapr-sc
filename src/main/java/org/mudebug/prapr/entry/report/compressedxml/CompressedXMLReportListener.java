@@ -121,7 +121,7 @@ public class CompressedXMLReportListener implements MutationResultListener {
                 + makeNode("" + details.getFirstIndex(), index)
                 + makeNode("" + details.getBlock(), block)
                 + makeNode(createCoveringTestsDesc(details.getTestsInOrder()), coveringTests)
-                + makeNode(createAllKillingTestDesc(mutation.getStatusTestPair().getKillingTest()), killingTests)
+//                + makeNode(createAllKillingTestDesc(mutation.getStatusTestPair().getKillingTest()), killingTests)
                 + makeNode(Double.toString(getSusp(details)), suspValue)
                 + makeNode(clean(details.getDescription()), description);
     }
