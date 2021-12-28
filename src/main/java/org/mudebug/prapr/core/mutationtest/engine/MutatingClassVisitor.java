@@ -22,12 +22,10 @@ package org.mudebug.prapr.core.mutationtest.engine;
 
 import org.mudebug.prapr.core.analysis.GlobalInfo;
 import org.mudebug.prapr.core.mutationtest.engine.mutators.util.CollectedClassInfo;
-import org.objectweb.asm.Opcodes;
+import org.pitest.bytecode.ASMVersion;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassName;
-import org.pitest.functional.F;
 import org.pitest.mutationtest.engine.Location;
-import org.pitest.mutationtest.engine.MethodName;
 import org.pitest.mutationtest.engine.gregor.AvoidAssertsMethodAdapter;
 import org.pitest.mutationtest.engine.gregor.AvoidStringSwitchedMethodAdapter;
 import org.pitest.mutationtest.engine.gregor.ClassInfo;
@@ -44,6 +42,7 @@ import org.pitest.reloc.asm.MethodVisitor;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  *
@@ -51,7 +50,7 @@ import java.util.Set;
  * @since 2.0.3
  */
 class MutatingClassVisitor extends ClassVisitor {
-    private final F<MethodInfo, Boolean> filter;
+    private final Predicate<MethodInfo> filter;
 
     private final PraPRMutaterClassContext context;
 
@@ -65,12 +64,12 @@ class MutatingClassVisitor extends ClassVisitor {
 
     MutatingClassVisitor(final ClassVisitor delegateClassVisitor,
                          final PraPRMutaterClassContext context,
-                         final F<MethodInfo, Boolean> filter,
+                         final Predicate<MethodInfo> filter,
                          final Collection<MethodMutatorFactory> mutators,
                          final CollectedClassInfo collectedClassInfo,
                          final ClassByteArraySource cache,
                          final GlobalInfo classHierarchy) {
-        super(Opcodes.ASM6, delegateClassVisitor);
+        super(ASMVersion.ASM_VERSION, delegateClassVisitor);
         this.context = context;
         this.filter = filter;
         this.methodMutators = new HashSet<>(mutators);
@@ -84,7 +83,7 @@ class MutatingClassVisitor extends ClassVisitor {
                                      final String signature, final String[] exceptions) {
         final PraPRMethodMutationContext methodContext = new PraPRMethodMutationContext(this.context,
                 Location.location(ClassName.fromString(this.context.getClassInfo().getName()),
-                        MethodName.fromString(methodName), methodDescriptor));
+                        methodName, methodDescriptor));
 
         final MethodVisitor methodVisitor =
                 this.cv.visitMethod(access, methodName, methodDescriptor, signature, exceptions);
@@ -94,7 +93,7 @@ class MutatingClassVisitor extends ClassVisitor {
                 .withMethodName(methodName)
                 .withMethodDescriptor(methodDescriptor);
 
-        if (this.filter.apply(info)) {
+        if (this.filter.test(info)) {
             return this.visitMethodForMutation(methodContext, info, methodVisitor);
         } else {
             return methodVisitor;
@@ -110,7 +109,7 @@ class MutatingClassVisitor extends ClassVisitor {
             next = getMethodVisitor(each, methodContext, methodInfo, next);
         }
 
-        return new InstructionTrackingMethodVisitor(wrapWithDecorators(methodContext, wrapWithFilters(methodContext, next)), methodContext);
+        return new InstructionTrackingMethodVisitor(wrapWithDecorators(methodContext, wrapWithFilters(methodContext, next), methodInfo), methodContext);
     }
 
     private MethodVisitor getMethodVisitor(final MethodMutatorFactory methodMutatorFactory,
@@ -140,13 +139,14 @@ class MutatingClassVisitor extends ClassVisitor {
     }
 
     private static MethodVisitor wrapWithDecorators(final PraPRMethodMutationContext methodContext,
-                                                    final MethodVisitor mv) {
-        return wrapWithBlockTracker(methodContext, wrapWithLineTracker(methodContext, mv));
+                                                    final MethodVisitor mv, final MethodInfo methodInfo) {
+        return wrapWithBlockTracker(methodContext, wrapWithLineTracker(methodContext, mv), methodInfo);
     }
 
     private static MethodVisitor wrapWithBlockTracker(final PraPRMethodMutationContext methodContext,
-                                                      final MethodVisitor mv) {
-        return new BlockTrackingMethodDecorator(methodContext, mv);
+                                                      final MethodVisitor mv, final MethodInfo methodInfo) {
+        return new BlockTrackingMethodDecorator(methodContext, mv, methodInfo.getAccess(), methodInfo.getName(),
+                methodInfo.getMethodDescriptor(), null, null);
     }
 
     private static MethodVisitor wrapWithLineTracker(final PraPRMethodMutationContext methodContext,

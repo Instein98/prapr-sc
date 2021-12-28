@@ -37,10 +37,7 @@ import org.pitest.coverage.TestInfo;
 import org.pitest.coverage.analysis.LineMapper;
 import org.pitest.coverage.execute.CoverageOptions;
 import org.pitest.coverage.execute.CoverageProcess;
-import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
-import org.pitest.functional.Option;
-import org.pitest.functional.SideEffect1;
 import org.pitest.functional.prelude.Prelude;
 import org.pitest.help.PitHelpError;
 import org.pitest.maven.PraPRReportOptions;
@@ -54,6 +51,7 @@ import org.pitest.util.PitError;
 import org.pitest.util.SocketFinder;
 import org.pitest.util.Timings;
 import org.pitest.util.Unchecked;
+import org.pitest.util.Verbosity;
 
 import java.io.File;
 import java.io.IOException;
@@ -65,8 +63,11 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Logger;
 
 /**
@@ -90,7 +91,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
 
     private final LaunchOptions launchOptions;
 
-    private final boolean showProgress;
+    private final Verbosity verbosity;
 
     private final boolean shouldInferFailingTests;
 
@@ -108,7 +109,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
                                   final CoverageExporter exporter,
                                   final CodeSource code,
                                   final LaunchOptions launchOptions,
-                                  final boolean showProgress,
+                                  final Verbosity verbosity,
                                   final PraPRReportOptions reportOptions) {
         this.timings = timings;
         this.exporter = exporter;
@@ -116,7 +117,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
         this.coverageOptions = coverageOptions;
         this.workingDir = workingDir;
         this.launchOptions = launchOptions;
-        this.showProgress = showProgress;
+        this.verbosity = verbosity;
         this.shouldInferFailingTests = reportOptions.getFailingTests().isEmpty();
         this.failingTests = new HashSet<>(reportOptions.getFailingTests());
         this.allTestsCount = 0;
@@ -169,7 +170,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
 
         final List<String> filteredTests = FCollection.map(tests, classInfoToName());
 
-        final SideEffect1<CoverageResult> handler = decoratedResultProcessor(coverage);
+        final Consumer<CoverageResult> handler = decoratedResultProcessor(coverage);
 
         final SocketFinder sf = new SocketFinder();
         final ServerSocket socket = sf.getNextAvailableServerSocket();
@@ -199,47 +200,32 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
         }
     }
 
-    private static F<ClassInfo, String> classInfoToName() {
-        return new F<ClassInfo, String>() {
-            @Override
-            public String apply(final ClassInfo classInfo) {
-                return classInfo.getName().asInternalName();
-            }
-        };
+    private static Function<ClassInfo, String> classInfoToName() {
+        return a -> a.getName().asInternalName();
     }
 
-    private SideEffect1<String> captureStandardOutIfVerbose() {
-        if (this.coverageOptions.isVerbose()) {
+    private Consumer<String> captureStandardOutIfVerbose() {
+        if (this.verbosity.showMinionOutput()) {
             return log();
         } else {
             return Prelude.noSideEffect(String.class);
         }
     }
 
-    private static SideEffect1<String> log() {
-        return new SideEffect1<String>() {
-            @Override
-            public void apply(final String a) {
-                LOG.fine("MINION : " + a);
-            }
-        };
+    private static Consumer<String> log() {
+        return a -> LOG.fine("MINION : " + a);
     }
 
-    private static SideEffect1<String> logInfo() {
-        return new SideEffect1<String>() {
-            @Override
-            public void apply(final String a) {
-                LOG.info("MINION : " + a);
-            }
-        };
+    private static Consumer<String> logInfo() {
+        return a -> LOG.info("MINION : " + a);
     }
 
-    private SideEffect1<CoverageResult> decoratedResultProcessor(final CoverageData coverageData) {
-        return new SideEffect1<CoverageResult>() {
-            final SideEffect1<CoverageResult> resultProcessor = resultProcessor(coverageData);
+    private Consumer<CoverageResult> decoratedResultProcessor(final CoverageData coverageData) {
+        return new Consumer<CoverageResult>() {
+            final Consumer<CoverageResult> resultProcessor = resultProcessor(coverageData);
 
             @Override
-            public void apply(CoverageResult coverageResult) {
+            public void accept(CoverageResult coverageResult) {
                 PraPRCoverageGenerator.this.allTestsCount++;
                 if (!coverageResult.isGreenTest() && PraPRCoverageGenerator.this.shouldInferFailingTests) {
                     final String sanitizedName = TestCaseUtil.sanitizeTestName(coverageResult.getTestUnitDescription().getQualifiedName());
@@ -251,7 +237,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
                 for (BlockLocation each : coverageResult.getCoverage()) {
                     addTestsToBlockMap(ti, each);
                 }
-                this.resultProcessor.apply(coverageResult);
+                this.resultProcessor.accept(coverageResult);
             }
 
             private void addTestsToBlockMap(final TestInfo ti, BlockLocation each) {
@@ -266,7 +252,7 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
             private TestInfo createTestInfo(final Description description,
                                             final int executionTime,
                                             final int linesCovered) {
-                final Option<ClassName> testee =
+                final Optional<ClassName> testee =
                         PraPRCoverageGenerator.this.code.findTestee(description.getFirstTestClass());
                 return new TestInfo(description.getFirstTestClass(), description.getQualifiedName(),
                         executionTime, testee, linesCovered);
@@ -274,16 +260,16 @@ public class PraPRCoverageGenerator implements CoverageGenerator {
         };
     }
 
-    private SideEffect1<CoverageResult> resultProcessor(final CoverageData coverage) {
-        return new SideEffect1<CoverageResult>() {
+    private Consumer<CoverageResult> resultProcessor(final CoverageData coverage) {
+        return new Consumer<CoverageResult>() {
             private final String[] spinner = new String[] { "\u0008/", "\u0008-", "\u0008\\", "\u0008|" };
 
             private int i = 0;
 
             @Override
-            public void apply(final CoverageResult cr) {
+            public void accept(final CoverageResult cr) {
                 coverage.calculateClassCoverage(cr);
-                if (PraPRCoverageGenerator.this.showProgress) {
+                if (PraPRCoverageGenerator.this.verbosity.showSpinner()) {
                     System.out.printf("%s", this.spinner[this.i % this.spinner.length]);
                 }
                 this.i++;

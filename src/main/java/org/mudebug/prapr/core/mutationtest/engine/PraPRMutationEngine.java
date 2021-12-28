@@ -24,9 +24,7 @@ import org.mudebug.prapr.core.SuspChecker;
 import org.mudebug.prapr.core.analysis.GlobalInfo;
 import org.mudebug.prapr.core.mutationtest.engine.config.PraPRMutationEngineConfig;
 import org.pitest.classinfo.ClassByteArraySource;
-import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
-import org.pitest.functional.predicate.Predicate;
 import org.pitest.mutationtest.engine.Mutater;
 import org.pitest.mutationtest.engine.MutationEngine;
 import org.pitest.mutationtest.engine.gregor.MethodInfo;
@@ -35,6 +33,7 @@ import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.function.Predicate;
 
 /**
  * @author Ali Ghanbari (ali.ghanbari@utdallas.edu)
@@ -63,21 +62,12 @@ public class PraPRMutationEngine implements MutationEngine {
 
     @Override
     public Collection<String> getMutatorNames() {
-        return FCollection.map(this.mutators, toName());
+        return FCollection.map(this.mutators, MethodMutatorFactory::getName);
     }
 
     @Override
     public String getName() {
         return "prapr";
-    }
-
-    private static F<MethodMutatorFactory, String> toName() {
-        return new F<MethodMutatorFactory, String>() {
-            @Override
-            public String apply(final MethodMutatorFactory a) {
-                return a.getName();
-            }
-        };
     }
 
     @Override

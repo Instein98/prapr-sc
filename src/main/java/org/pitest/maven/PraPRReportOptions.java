@@ -67,7 +67,7 @@ public class PraPRReportOptions extends ReportOptions {
         setTimeoutConstant(reportOptions.getTimeoutConstant());
         setTargetTests(reportOptions.getTargetTests());
         setLoggingClasses(reportOptions.getLoggingClasses());
-        setVerbose(reportOptions.isVerbose());
+        setVerbosity(reportOptions.getVerbosity());
         setFailWhenNoMutations(reportOptions.shouldFailWhenNoMutations());
         addOutputFormats(reportOptions.getOutputFormats());
         setGroupConfig(reportOptions.getGroupConfig());
@@ -84,7 +84,6 @@ public class PraPRReportOptions extends ReportOptions {
         setMaximumAllowedSurvivors(reportOptions.getMaximumAllowedSurvivors());
         setExcludedRunners(reportOptions.getExcludedRunners());
         setIncludedTestMethods(reportOptions.getIncludedTestMethods());
-        setTestPlugin(reportOptions.getTestPlugin());
         setClassPathElements(reportOptions.getClassPathElements());
     }
 

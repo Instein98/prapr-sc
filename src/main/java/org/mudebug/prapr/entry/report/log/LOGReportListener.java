@@ -35,9 +35,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.mudebug.prapr.core.SuspStrategy;
-import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
 import org.pitest.mutationtest.ClassMutationResults;
 import org.pitest.mutationtest.DetectionStatus;
@@ -173,7 +173,7 @@ public class LOGReportListener implements MutationResultListener {
     
     private List<List<MutationDetails>> groupAndSortByMutScore(final List<MutationDetails> chunk) {
         Map<Double, Collection<MutationDetails>> mutationsGroupedMap = FCollection.bucket(chunk,
-                new F<MutationDetails, Double>() {
+                new Function<MutationDetails, Double>() {
                     @Override
                     public Double apply(MutationDetails md) {
                         return LOGReportListener.this.mutatorScore.get(sanitizeMutatorName(md.getMutator()));

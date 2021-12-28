@@ -26,12 +26,12 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.apache.maven.artifact.Artifact;
 import org.apache.maven.project.MavenProject;
 import org.pitest.classinfo.ClassName;
 import org.pitest.classpath.DirectoryClassPathRoot;
-import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
 
 /**
@@ -72,7 +72,7 @@ public class ModuleUtils
 	 */
 	public static List<File> namesToFiles(List<String> nameList) {
 		List<File> files = new ArrayList<File>();
-		F<String, File> map = new F<String, File>() {
+		Function<String, File> map = new Function<String, File>() {
 			@Override
 			public File apply(final String s) {
 				File f = new File(s);
@@ -135,7 +135,7 @@ public class ModuleUtils
 	private static ArrayList<String> getClassPatternsFromDir(
 			String buildOutputDirectory) {
 		Set<String> classPatterns = new HashSet<String>();
-		F<String, String> classToPatterns = new F<String, String>() {
+		Function<String, String> classToPatterns = new Function<String, String>() {
 			@Override
 			public String apply(String clazz) {
 				return ClassName.fromString(clazz).getPackage().asJavaName()

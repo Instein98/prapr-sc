@@ -38,11 +38,11 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.mudebug.prapr.core.SuspStrategy;
 import org.mudebug.prapr.entry.report.Commons;
 import org.pitest.coverage.TestInfo;
-import org.pitest.functional.Option;
 import org.pitest.mutationtest.ClassMutationResults;
 import org.pitest.mutationtest.MutationResult;
 import org.pitest.mutationtest.MutationResultListener;
@@ -114,7 +114,7 @@ public class CompressedXMLReportListener implements MutationResultListener {
         final MutationDetails details = mutation.getDetails();
         return makeNode(clean(details.getFilename()), sourceFile)
                 + makeNode(clean(details.getClassName().asJavaName()), mutatedClass)
-                + makeNode(clean(details.getMethod().name()), mutatedMethod)
+                + makeNode(clean(details.getMethod()), mutatedMethod)
                 + makeNode(clean(details.getId().getLocation().getMethodDesc()), methodDescription)
                 + makeNode("" + details.getLineNumber(), lineNumber)
                 + makeNode(clean(details.getMutator()), mutator)
@@ -162,9 +162,9 @@ public class CompressedXMLReportListener implements MutationResultListener {
     }
 
 
-    private String createAllKillingTestDesc(final Option<String> killingTest) {
-        if (killingTest.hasSome()) {
-            final String s = killingTest.value();
+    private String createAllKillingTestDesc(final Optional<String> killingTest) {
+        if (killingTest.isPresent()) {
+            final String s = killingTest.get();
             return clean(s);
         } else {
             return null;

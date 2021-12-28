@@ -349,7 +349,7 @@ public final class Commons {
 
     public static String getSupertype(final ClassByteArraySource cache,
                                       final String typeInternalName) {
-        final byte[] bytes = cache.getBytes(typeInternalName).value();
+        final byte[] bytes = cache.getBytes(typeInternalName).get();
         final SimpleClassVisitor cv = new SimpleClassVisitor();
         final ClassReader cr = new ClassReader(bytes);
         cr.accept(cv, ClassReader.EXPAND_FRAMES);

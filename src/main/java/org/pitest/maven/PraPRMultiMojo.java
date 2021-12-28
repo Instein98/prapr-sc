@@ -24,6 +24,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.maven.artifact.Artifact;
@@ -34,7 +35,6 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
-import org.pitest.functional.Option;
 import org.pitest.mutationtest.config.ReportOptions;
 import org.pitest.mutationtest.tooling.CombinedStatistics;
 
@@ -90,15 +90,15 @@ public class PraPRMultiMojo extends PraPRMojo
 	 * @return the results via CombinedStatistics
 	 */
 	@Override
-	protected Option<CombinedStatistics> analyse()
+	protected Optional<CombinedStatistics> analyse()
 			throws MojoExecutionException {
 		// Get normal PraPR configs
 		final ReportOptions data=preanalyse();
 		// Modify the PraPR config before executing
 		modifyPraPRReportOptions(data);
 		// Actual entry point is right here for executing PraPR
-		return Option.some(this.goalStrategy.execute(detectBaseDir(), data,
-				this.plugins, getEnvironmentVariables()));
+		return Optional.ofNullable(getGoalStrategy().execute(detectBaseDir(), data,
+				getPlugins(), getEnvironmentVariables()));
 	}
 
 	/**
@@ -236,7 +236,7 @@ public class PraPRMultiMojo extends PraPRMojo
 				List<String> classList = ModuleUtils.getSrcClasses(module);
 				ModuleUtils.addToList(targetClasses, classList);
 			}
-			this.targetClasses = targetClasses;
+			setTargetClasses(targetClasses);
 		}
 	}
 
@@ -248,7 +248,7 @@ public class PraPRMultiMojo extends PraPRMojo
 	public void updateTargetTests() {
 		List<String> targetTests = getTargetTests();
 		if (targetTests == null || targetTests.isEmpty()) {
-			this.targetTests = ModuleUtils.getTestClasses(getProject());
+			setTargetClasses(ModuleUtils.getTestClasses(getProject()));
 		}
 	}
 

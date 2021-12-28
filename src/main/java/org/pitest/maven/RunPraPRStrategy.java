@@ -43,9 +43,9 @@ public class RunPraPRStrategy implements GoalStrategy {
                                       final Map<String, String> environmentVariables) throws MojoExecutionException {
         final EntryPoint entryPoint = new PraPREntryPoint();
         AnalysisResult result = entryPoint.execute(baseDir, options, plugins, environmentVariables);
-        if (result.getError().hasSome()) {
-            throw new MojoExecutionException("fail", result.getError().value());
+        if (result.getError().isPresent()) {
+            throw new MojoExecutionException("fail", result.getError().get());
         }
-        return result.getStatistics().value();
+        return result.getStatistics().get();
     }
 }

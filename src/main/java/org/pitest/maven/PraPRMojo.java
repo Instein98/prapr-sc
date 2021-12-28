@@ -31,13 +31,13 @@ import org.mudebug.prapr.core.SuspCheckerType;
 import org.mudebug.prapr.core.SuspStrategyImpl;
 import org.mudebug.prapr.core.commons.TestCaseUtil;
 import org.mudebug.prapr.core.commons.TextStyleUtil;
-import org.pitest.functional.Option;
 import org.pitest.mutationtest.config.PluginServices;
 import org.pitest.mutationtest.config.ReportOptions;
 import org.pitest.mutationtest.tooling.CombinedStatistics;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author Ali Ghanbari (ali.ghanbari@utdallas.edu)
@@ -96,9 +96,9 @@ public class PraPRMojo extends AbstractPitMojo {
     }
 
     @Override
-    protected Option<CombinedStatistics> analyse() throws MojoExecutionException {
+    protected Optional<CombinedStatistics> analyse() throws MojoExecutionException {
         final PraPRReportOptions data = preanalyse();
-        return Option.some(this.goalStrategy.execute(detectBaseDir(), data, this.plugins, getEnvironmentVariables()));
+        return Optional.ofNullable(getGoalStrategy().execute(detectBaseDir(), data, getPlugins(), getEnvironmentVariables()));
     }
 
     protected PraPRReportOptions preanalyse() {
@@ -133,7 +133,7 @@ public class PraPRMojo extends AbstractPitMojo {
             log.info("PraPR verbose report is activated.");
         }
         final ReportOptions pitReportOptions;
-        pitReportOptions = new MojoToReportOptionsConverter(this, new SurefireConfigConverter(), this.filter)
+        pitReportOptions = new MojoToReportOptionsConverter(this, new SurefireConfigConverter(), getFilter())
                 .convert();
         final PraPRReportOptions data = new PraPRReportOptions(pitReportOptions);
         data.setMutationEngine("prapr");

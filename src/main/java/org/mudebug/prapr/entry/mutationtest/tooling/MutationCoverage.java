@@ -37,7 +37,6 @@ import org.pitest.coverage.CoverageDatabase;
 import org.pitest.coverage.CoverageGenerator;
 import org.pitest.coverage.TestInfo;
 import org.pitest.functional.FCollection;
-import org.pitest.functional.Option;
 import org.pitest.help.Help;
 import org.pitest.help.PitHelpError;
 import org.pitest.maven.PraPRReportOptions;
@@ -84,6 +83,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -134,9 +134,9 @@ public class MutationCoverage {
     }
 
     public CombinedStatistics runReport() throws IOException {
-        Log.setVerbose(this.data.isVerbose());
+        Log.setVerbose(this.data.getVerbosity());
         final Runtime runtime = Runtime.getRuntime();
-        if (!this.data.isVerbose()) {
+        if (!this.data.getVerbosity().showMinionOutput()) {
             LOG.info("Verbose logging is disabled. If you encounter an problem please enable it before reporting an issue.");
         }
 
@@ -251,7 +251,7 @@ public class MutationCoverage {
 
         final ListenerArguments args = new AugmentedListenerArguments(this.strategies.output(),
                 coverageData, new SmartSourceLocator(this.data.getSourceDirs()),
-                engine, cbas, t0, this.data.getSuspStrategy(), this.failingTests, this.allTestsCount,
+                engine, cbas, t0, this.data.isFullMutationMatrix(), data, this.data.getSuspStrategy(), this.failingTests, this.allTestsCount,
                 this.data.isVerboseReport());
 
         final MutationResultListener mutationReportListener = this.strategies.listenerFactory()
@@ -260,7 +260,7 @@ public class MutationCoverage {
         ls.add(mutationReportListener);
         ls.add(new HistoryListener(history()));
 
-        if (!this.data.isVerbose()) {
+        if (!this.data.getVerbosity().showSpinner()) {
             ls.add(new SpinnerListener(System.out));
         }
         return ls;
@@ -322,7 +322,7 @@ public class MutationCoverage {
                     .makeTestPrioritiser(this.data.getFreeFormProperties(), this.code, coverageData);
         }
 
-        MutationInterceptor interceptor = this.settings.getInterceptor().createInterceptor(this.data, bas);
+        MutationInterceptor interceptor = this.settings.getInterceptor().createInterceptor(this.data, coverageData, bas);
 
         final MutationSource source = new MutationSource(mutationConfig, testPrioritiser, bas, interceptor);
 
@@ -331,7 +331,7 @@ public class MutationCoverage {
 
         final WorkerFactory wf = new WorkerFactory(this.baseDir, coverage().getConfiguration(), mutationConfig, args,
                 new PercentAndConstantTimeoutStrategy(this.data.getTimeoutFactor(), this.data.getTimeoutConstant()),
-                this.data.isVerbose(), this.data.getClassPath().getLocalClassPath());
+                this.data.getVerbosity(), this.data.isFullMutationMatrix(), this.data.getClassPath().getLocalClassPath());
 
         MutationGrouper grouper = this.settings.getMutationGrouper().makeFactory(this.data.getFreeFormProperties(),
                 this.code, this.data.getNumberOfThreads(), this.data.getMutationUnitSize());
@@ -398,16 +398,13 @@ public class MutationCoverage {
     // a class not provided by project classpath
     private ClassByteArraySource fallbackToClassLoader(final ClassByteArraySource bas) {
         final ClassByteArraySource clSource = ClassloaderByteArraySource.fromContext();
-        return new ClassByteArraySource() {
-            @Override
-            public Option<byte[]> getBytes(String clazz) {
-                Option<byte[]> maybeBytes = bas.getBytes(clazz);
-                if (maybeBytes.hasSome()) {
-                    return maybeBytes;
-                }
-                LOG.log(Level.FINE, "Could not find " + clazz + " on classpath for analysis. Falling back to classloader");
-                return clSource.getBytes(clazz);
+        return clazz -> {
+            Optional<byte[]> maybeBytes = bas.getBytes(clazz);
+            if (maybeBytes.isPresent()) {
+                return maybeBytes;
             }
+            LOG.log(Level.FINE, "Could not find " + clazz + " on classpath for analysis. Falling back to classloader");
+            return clSource.getBytes(clazz);
         };
     }
 
