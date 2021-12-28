@@ -21,9 +21,10 @@ package org.mudebug.prapr.core.mutationtest.engine.mutators.util;
  */
 
 import org.pitest.classinfo.ClassByteArraySource;
-import org.pitest.functional.Option;
 import org.pitest.reloc.asm.ClassReader;
 import org.pitest.util.Log;
+
+import java.util.Optional;
 
 /**
  * Utility methods for collecting information about classes to be mutated.
@@ -45,9 +46,9 @@ public class ClassInfoCollector {
         if (className.startsWith("[")) { // className is an array type descriptor
             return new CollectedClassInfo();
         } else { //className is the internal name of some class
-            final Option<byte[]> bytes = cache.getBytes(className);
-            if (bytes.hasSome()) {
-                return collect(bytes.value());
+            final Optional<byte[]> bytes = cache.getBytes(className);
+            if (bytes.isPresent()) {
+                return collect(bytes.get());
             } else {
                 final String javaName = className.replace('/', '.');
                 Log.getLogger().warning("OOPS! Something went wrong in reading/parsing the class " + javaName);

@@ -22,12 +22,12 @@ package org.mudebug.prapr.core.mutationtest.engine.config;
 
 import org.mudebug.prapr.core.SuspChecker;
 import org.mudebug.prapr.core.analysis.GlobalInfo;
-import org.pitest.functional.predicate.Predicate;
 import org.pitest.mutationtest.engine.gregor.MethodInfo;
 import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
 import org.pitest.mutationtest.engine.gregor.config.DefaultMutationEngineConfiguration;
 
 import java.util.Collection;
+import java.util.function.Predicate;
 
 /**
  * Mutation engine configuration for PraPR mutation engine

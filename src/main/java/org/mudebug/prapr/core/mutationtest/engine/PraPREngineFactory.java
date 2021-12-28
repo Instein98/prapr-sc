@@ -25,8 +25,6 @@ import org.mudebug.prapr.core.analysis.GlobalInfo;
 import org.mudebug.prapr.core.mutationtest.AugmentedEngineArguments;
 import org.mudebug.prapr.core.mutationtest.engine.config.AugmentedMutator;
 import org.mudebug.prapr.core.mutationtest.engine.config.PraPRMutationEngineConfig;
-import org.pitest.functional.F;
-import org.pitest.functional.predicate.Predicate;
 import org.pitest.functional.prelude.Prelude;
 import org.pitest.mutationtest.EngineArguments;
 import org.pitest.mutationtest.MutationEngineFactory;
@@ -36,6 +34,7 @@ import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
 import org.pitest.util.Glob;
 
 import java.util.Collection;
+import java.util.function.Predicate;
 
 /**
  * @author Ali Ghanbari (ali.ghanbari@utdallas.edu)
@@ -74,14 +73,9 @@ public class PraPREngineFactory implements MutationEngineFactory {
         return "PraPR mutation engine factory";
     }
 
-    private static F<MethodInfo, Boolean> stringToMethodInfoPredicate(final Collection<String> excludedMethods) {
+    private static Predicate<MethodInfo> stringToMethodInfoPredicate(final Collection<String> excludedMethods) {
         final Predicate<String> excluded = Prelude.or(Glob.toGlobPredicates(excludedMethods));
-        return new Predicate<MethodInfo>() {
-            @Override
-            public Boolean apply(final MethodInfo methodInfo) {
-                return excluded.apply(methodInfo.getName());
-            }
-        };
+        return a -> excluded.test(a.getName());
     }
 
     private static Collection<? extends MethodMutatorFactory>

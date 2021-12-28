@@ -61,7 +61,7 @@ public final class WeakSuspChecker implements SuspChecker {
                     methods = new HashSet<>();
                     this.coverage.put(className, methods);
                 }
-                methods.add(loc.getMethodName().name() + loc.getMethodDesc());
+                methods.add(loc.getMethodName() + loc.getMethodDesc());
             }
         }
     }

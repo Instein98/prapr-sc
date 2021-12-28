@@ -30,15 +30,12 @@ import org.pitest.bytecode.NullVisitor;
 import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.classinfo.ClassName;
 import org.pitest.classinfo.ComputeClassWriter;
-import org.pitest.functional.F;
 import org.pitest.functional.FCollection;
-import org.pitest.functional.MutableList;
-import org.pitest.functional.Option;
-import org.pitest.functional.predicate.Predicate;
 import org.pitest.mutationtest.engine.Mutant;
 import org.pitest.mutationtest.engine.Mutater;
 import org.pitest.mutationtest.engine.MutationDetails;
 import org.pitest.mutationtest.engine.MutationIdentifier;
+import org.pitest.mutationtest.engine.gregor.GregorMutater;
 import org.pitest.mutationtest.engine.gregor.MethodInfo;
 import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
 import org.pitest.mutationtest.engine.gregor.PraPRMutaterClassContext;
@@ -46,12 +43,18 @@ import org.pitest.reloc.asm.ClassReader;
 import org.pitest.reloc.asm.ClassWriter;
 import org.pitest.util.Log;
 
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.function.Predicate;
 
 import static org.pitest.functional.prelude.Prelude.and;
 import static org.pitest.functional.prelude.Prelude.not;
@@ -89,54 +92,45 @@ public class PraPRMutater implements Mutater {
     @Override
     public Mutant getMutation(MutationIdentifier id) {
         final PraPRMutaterClassContext context = new PraPRMutaterClassContext();
-        context.setTargetMutation(Option.some(id));
-        final Option<byte[]> bytes = this.byteSource.getBytes(id.getClassName().asJavaName());
-        final ClassReader reader = new ClassReader(bytes.value());
+        context.setTargetMutation(Optional.ofNullable(id));
+        final Optional<byte[]> bytes = this.byteSource.getBytes(id.getClassName().asJavaName());
+        final ClassReader reader = new ClassReader(bytes.get());
         final ClassWriter w = new ComputeClassWriter(this.byteSource,
-                this.computeCache, FrameOptions.pickFlags(bytes.value()));
-        final CollectedClassInfo cci = ClassInfoCollector.collect(bytes.value());
+                this.computeCache, FrameOptions.pickFlags(bytes.get()));
+        final CollectedClassInfo cci = ClassInfoCollector.collect(bytes.get());
         final MutatingClassVisitor mca = new MutatingClassVisitor(w, context,
                 filterMethods(), FCollection.filter(this.mutators, isMutatorFor(id)),
                 cci, this.byteSource, this.classHierarchy);
         reader.accept(mca, ClassReader.EXPAND_FRAMES);
 
         final List<MutationDetails> details = context.getMutationDetails(context
-                .getTargetMutation().value());
+                .getTargetMutation().get());
 
         return new Mutant(details.get(0), w.toByteArray());
     }
 
     private static Predicate<MethodMutatorFactory> isMutatorFor(final MutationIdentifier id) {
-        return new Predicate<MethodMutatorFactory>() {
-            @Override
-            public Boolean apply(final MethodMutatorFactory a) {
-                return id.getMutator().equals(a.getGloballyUniqueId());
-            }
-        };
+        return a -> id.getMutator().equals(a.getGloballyUniqueId());
     }
 
     @Override
     public List<MutationDetails> findMutations(ClassName classToMutate) {
         if (!this.suspChecker.isHit(classToMutate.asJavaName())) {
             Log.getLogger().info(String.format("*** THE CLASS %s IS LEFT UNMUTATED.", classToMutate.asJavaName()));
-            return new MutableList<>();
+            return new ArrayList<>();
         }
 
         final PraPRMutaterClassContext context = new PraPRMutaterClassContext();
-        context.setTargetMutation(Option.<MutationIdentifier>none());
-        return this.byteSource.getBytes(classToMutate.asInternalName()).flatMap(findMutations(context));
+        context.setTargetMutation(Optional.empty());
+        Optional<byte[]> bytes = this.byteSource.getBytes(classToMutate.asInternalName());
+        return bytes.map(findMutations(context)).orElse(Collections.emptyList());
     }
 
-    private F<byte[], Iterable<MutationDetails>> findMutations(final PraPRMutaterClassContext context) {
-        return new F<byte[], Iterable<MutationDetails>>() {
-            @Override
-            public Iterable<MutationDetails> apply(final byte[] bytes) {
-                return findMutationsForBytes(context, bytes);
-            }
-        };
+    private Function<byte[], List<MutationDetails>> findMutations(final PraPRMutaterClassContext context) {
+        return bytes -> findMutationsForBytes(context, bytes);
     }
 
-    private Collection<MutationDetails> findMutationsForBytes(final PraPRMutaterClassContext context,
+    private List<MutationDetails> findMutationsForBytes(final PraPRMutaterClassContext context,
                                                               final byte[] classToMutate) {
         final CollectedClassInfo cci = ClassInfoCollector.collect(classToMutate);
         final ClassReader first = new ClassReader(classToMutate);
@@ -147,23 +141,12 @@ public class PraPRMutater implements Mutater {
         return FCollection.filter(context.getCollectedMutations(), effectiveMutationChecker());
     }
 
-    private F<MutationDetails, Boolean> effectiveMutationChecker() {
-        return new F<MutationDetails, Boolean>() {
-            @Override
-            public Boolean apply(MutationDetails mutationDetails) {
-                return mutationDetails.getInstructionIndex() >= 0;
-            }
-        };
+    private Predicate<MutationDetails> effectiveMutationChecker() {
+        return a -> a.getInstructionIndex() >= 0;
     }
 
     private static Predicate<MethodInfo> shouldMutate(final SuspChecker suspChecker) {
-        return new Predicate<MethodInfo>() {
-            @Override
-            public Boolean apply(MethodInfo a) {
-                final ClassName owningClassName = Commons.getOwningClassName(a);
-                return suspChecker.isHit(owningClassName.asJavaName(), a.getName() + a.getMethodDescriptor());
-            }
-        };
+        return a -> suspChecker.isHit(Commons.getOwningClassName(a).asJavaName(), a.getName() + a.getMethodDescriptor());
     }
 
     //------------------------- CREDIT: copied from PIT's source code
@@ -176,32 +159,15 @@ public class PraPRMutater implements Mutater {
                 not(isGroovyClass()));
     }
 
-    private static F<MethodInfo, Boolean> isGroovyClass() {
-        return new Predicate<MethodInfo>() {
-            @Override
-            public Boolean apply(final MethodInfo a) {
-                return a.isInGroovyClass();
-            }
-        };
+    private static Predicate<MethodInfo> isGroovyClass() {
+        return MethodInfo::isInGroovyClass;
     }
 
     private static Predicate<MethodInfo> filterSyntheticMethods() {
-        return new Predicate<MethodInfo>() {
-            @Override
-            public Boolean apply(final MethodInfo a) {
-                // filter out synthetic methods,
-                // except lambda$... methods, which contain code from lambda expressions
-                return !a.isSynthetic() || a.getName().startsWith("lambda$");
-            }
-        };
+        return a -> !a.isSynthetic() || a.getName().startsWith("lambda$");
     }
 
     private static Predicate<MethodInfo> isGeneratedEnumMethod() {
-        return new Predicate<MethodInfo>() {
-            @Override
-            public Boolean apply(final MethodInfo a) {
-                return a.isGeneratedEnumMethod();
-            }
-        };
+        return MethodInfo::isGeneratedEnumMethod;
     }
 }

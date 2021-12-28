@@ -25,6 +25,7 @@ import org.pitest.classinfo.ClassByteArraySource;
 import org.pitest.coverage.CoverageDatabase;
 import org.pitest.mutationtest.ListenerArguments;
 import org.pitest.mutationtest.SourceLocator;
+import org.pitest.mutationtest.config.ReportOptions;
 import org.pitest.mutationtest.engine.MutationEngine;
 import org.pitest.util.ResultOutputStrategy;
 
@@ -51,11 +52,13 @@ public class AugmentedListenerArguments extends ListenerArguments {
                                       final MutationEngine engine,
                                       final ClassByteArraySource cbas,
                                       final long startTime,
+                                      final boolean fullMutationMatrix,
+                                      final ReportOptions data,
                                       final SuspStrategy suspStrategy,
                                       final Collection<String> failingTests,
                                       final int allTestsCount,
                                       final boolean dumpMutations) {
-        super(outputStrategy, coverage, locator, engine, startTime, true);
+        super(outputStrategy, coverage, locator, engine, startTime, fullMutationMatrix, data);
         this.failingTests = failingTests;
         this.allTestsCount = allTestsCount;
         this.suspStrategy = suspStrategy;

@@ -38,7 +38,6 @@ import org.mudebug.prapr.core.mutationtest.engine.mutators.PreconditionAdditionM
 import org.mudebug.prapr.core.mutationtest.engine.mutators.ReturningDereferenceGuardMutator;
 import org.mudebug.prapr.core.mutationtest.engine.mutators.ReturningMethodCallGuardMutator;
 import org.mudebug.prapr.core.mutationtest.engine.mutators.VoidMethodCallGuardMutator;
-import org.pitest.functional.F;
 import org.pitest.help.Help;
 import org.pitest.help.PitHelpError;
 import org.pitest.mutationtest.engine.gregor.MethodMutatorFactory;
@@ -54,6 +53,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 /**
  * This class augments PIT with new APR-specific mutators
@@ -140,7 +140,7 @@ public class AugmentedMutator {
 
     public static Collection<MethodMutatorFactory> fromStrings(final Collection<String> names) {
         final Set<MethodMutatorFactory> unique = new TreeSet<>(compareId());
-        final F<String, Iterable<? extends MethodMutatorFactory>> fromString = fromString();
+        final Function<String, Iterable<? extends MethodMutatorFactory>> fromString = fromString();
         for (final String name : names) {
             for (final MethodMutatorFactory mutator : fromString.apply(name)) {
                 unique.add(mutator);
@@ -158,8 +158,8 @@ public class AugmentedMutator {
         };
     }
 
-    private static F<String, Iterable<? extends MethodMutatorFactory>> fromString() {
-        return new F<String, Iterable<? extends MethodMutatorFactory>>() {
+    private static Function<String, Iterable<? extends MethodMutatorFactory>> fromString() {
+        return new Function<String, Iterable<? extends MethodMutatorFactory>>() {
             @Override
             public Iterable<? extends MethodMutatorFactory> apply(final String a) {
                 Iterable<? extends MethodMutatorFactory> i = MUTATORS.get(a);
