@@ -27,6 +27,7 @@ import org.pitest.mutationtest.ListenerArguments;
 import org.pitest.mutationtest.SourceLocator;
 import org.pitest.mutationtest.config.ReportOptions;
 import org.pitest.mutationtest.engine.MutationEngine;
+import org.pitest.plugin.FeatureSetting;
 import org.pitest.util.ResultOutputStrategy;
 
 import java.util.Collection;
@@ -46,6 +47,16 @@ public class AugmentedListenerArguments extends ListenerArguments {
 
     private final boolean dumpMutations;
 
+    // ListenerArguments fields
+    private final ResultOutputStrategy outputStrategy;
+    private final CoverageDatabase     coverage;
+    private final long                 startTime;
+    private final SourceLocator        locator;
+    private final MutationEngine       engine;
+    private final boolean              fullMutationMatrix;
+    private final ReportOptions        data;
+    private final FeatureSetting       setting;
+
     public AugmentedListenerArguments(final ResultOutputStrategy outputStrategy,
                                       final CoverageDatabase coverage,
                                       final SourceLocator locator,
@@ -58,12 +69,39 @@ public class AugmentedListenerArguments extends ListenerArguments {
                                       final Collection<String> failingTests,
                                       final int allTestsCount,
                                       final boolean dumpMutations) {
+        this(outputStrategy, coverage, locator, engine, cbas, startTime, fullMutationMatrix, data,
+                null, suspStrategy, failingTests, allTestsCount, dumpMutations);
+    }
+
+    AugmentedListenerArguments(final ResultOutputStrategy outputStrategy,
+                                      final CoverageDatabase coverage,
+                                      final SourceLocator locator,
+                                      final MutationEngine engine,
+                                      final ClassByteArraySource cbas,
+                                      final long startTime,
+                                      final boolean fullMutationMatrix,
+                                      final ReportOptions data,
+                                      final FeatureSetting setting,
+                                      final SuspStrategy suspStrategy,
+                                      final Collection<String> failingTests,
+                                      final int allTestsCount,
+                                      final boolean dumpMutations) {
         super(outputStrategy, coverage, locator, engine, startTime, fullMutationMatrix, data);
         this.failingTests = failingTests;
         this.allTestsCount = allTestsCount;
         this.suspStrategy = suspStrategy;
         this.cbas = cbas;
         this.dumpMutations = dumpMutations;
+
+        // ListenerArguments fields
+        this.outputStrategy = outputStrategy;
+        this.coverage = coverage;
+        this.locator = locator;
+        this.startTime = startTime;
+        this.engine = engine;
+        this.fullMutationMatrix = fullMutationMatrix;
+        this.data = data;
+        this.setting = setting;
     }
 
     public Collection<String> getFailingTests() {
@@ -84,5 +122,22 @@ public class AugmentedListenerArguments extends ListenerArguments {
 
     public boolean shouldDumpMutations() {
         return this.dumpMutations;
+    }
+
+    @Override
+    public ListenerArguments withSetting(FeatureSetting setting) {
+        return new AugmentedListenerArguments(outputStrategy,
+                coverage,
+                locator,
+                engine,
+                cbas,
+                startTime,
+                fullMutationMatrix,
+                data,
+                setting,
+                suspStrategy,
+                failingTests,
+                allTestsCount,
+                dumpMutations);
     }
 }
